@@ -1,0 +1,101 @@
+---
+title: "Practical Machine Learning Peer Graded Project"
+author: "Choong-Hoon Hyun"
+date: '2022-12-04'
+output: html_document
+---
+
+### The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+### 1. Load relevant package.
+```{r load package, echo = TRUE}
+set.seed(1204)
+library(caret)
+``` 
+
+### 2. Download the training file and the test file
+```{r dowload training file and test file, echo = TRUE}
+fileURL_training <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+f_training <- file.path(getwd(), "pml-training.csv")
+download.file(fileURL_training, f_training)
+pml_training <- read.csv("./pml-training.csv", na.strings = c("", "NA"))
+
+fileURL_testing <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+f_testing <- file.path(getwd(), "pml-testing.csv")
+download.file(fileURL_testing, f_testing)
+pml_testing <- read.csv("./pml-testing.csv", na.strings = c("", "NA"))
+```
+
+### 3. Cleaning data set
+#### I will remove columns having NA to avoid potential errors and improve the accuracy. 
+```{r cleaning, echo =  TRUE}
+pml_training <- pml_training[, colSums(is.na(pml_training)) == 0]
+pml_testing <- pml_testing[, colSums(is.na(pml_testing)) == 0]
+```
+
+#### Remove non-relevant columns which are not predictors. 
+``` {r remove non-relevant columns, echo = TRUE}
+pml_training <- pml_training[, -c(1:7)]
+pml_testing <- pml_testing[, -c(1:7)]
+```
+
+### 4. Cross Validation
+#### I will perform cross validation. 75% of the training data will go to the training data set, and 25% of the data will be split into testing data set. 
+```{r cross validation, echo = TRUE}
+inTrain <- createDataPartition(pml_training$classe, p = .75, list = FALSE)
+training <- pml_training[inTrain, ]
+testing <- pml_training[-inTrain, ]
+```
+  
+### 5. Fit a model 
+#### 5.1 Random Forests: Fit the "classe" variable in the training set with Random Forests due to the accuracy. However, it takes for a while to get the outcome.
+```{r random forests, echo = TRUE}
+modFit_rf <- train(classe ~., data = training, method = "rf")
+```
+
+#### Use the model to predict "classe" with "testing" data set.
+```{r predicting the RF model with testing, echo = TRUE}
+pred_rf <- predict(modFit_rf, testing)
+```
+
+#### Apply the predicted data set to the "testing" data set to compare the predicted values with actual ones.
+```{r confusion matrix for RF, echo = TRUE}
+confusionMatrix(as.factor(testing$classe), pred_rf)
+```
+
+#### 5.2 Linear Discriminant Analysis (LDA): Fit the "classe" variable in the training set with LDA. It doesn't take too long to fit the model but it has poor accuracy.
+```{r LDA, echo = TRUE}
+modFit_lda <- train(classe ~., data = training, method = "lda")
+```
+
+#### Use the model to predict "classe" with "testing" data set.
+```{r predicting LDA model with testing, echo = TRUE}
+pred_lda <- predict(modFit_lda, testing)
+```
+
+#### Apply the predicted data set to the "testing" data set to compare the predicted values with actual ones.
+```{r confusion matrix for LDA, echo = TRUE}
+confusionMatrix(as.factor(testing$classe), pred_lda)
+```
+
+### 6. Compare the two models. 
+#### * By comparing Confusion Matrices of two fitted models, random forests show accuracy of 0.9949 while LDA indicates the poor accuracy (0.7078). 
+#### * I can confirm that the random forests provide more accurate prediction.
+
+### 7. Submit prediction data with the best model (Random Forests)
+#### Predict the 20 test cases with the "pml_testing" data set using Random Forests
+```{r prediction with the best model, echo = TRUE}
+submitted_rf <- predict(modFit_rf, pml_testing)
+```
+```{r submitted data, echo = TRUE}
+submitted_rf
+```
+
+### 8. Conclusions
+#### * I can confirm that the random forests are the best model, which presented a 0.9949 mean accuracy,and was decided as the model for submission. 
+#### * The predicted values with the test data set (pml_testing) are as follows.
+
+```{r submitted data with the best model, echo = TRUE}
+submitted_rf
+```
+
